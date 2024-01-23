@@ -1,4 +1,6 @@
 {{- define "server.deployment.volumeMounts" }}
+- name: server-config
+  mountPath: /data/config
 - name: server-files
   mountPath: /data/server
 - name: server-saves
@@ -88,6 +90,10 @@ spec:
           volumeMounts: {{ include "server.deployment.volumeMounts" . | nindent 12 }}
 
       volumes:
+        - name: server-config
+          configMap:
+            name: "{{ include "server.name" . }}-config"
+
         {{- if not .Values.persistence.serverFiles.enabled }}
         - name: server-files
           emptyDir: {}

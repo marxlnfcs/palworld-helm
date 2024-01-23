@@ -83,10 +83,12 @@ common:
   ## @param common.serverOptions - Server options
   ## see: https://tech.palworldgame.com/optimize-game-balance
   ##
+  ## WARNING: ALL VALUES HAVE TO BE BETWEEN "<VALUE>"
+  ##
   ## Example:
   ## serverOptions:
-  ##   DayTimeSpeedRate: 1.00000
-  ##   NightTimeSpeedRate: 1.00000
+  ##   DayTimeSpeedRate: "1.00000"
+  ##   NightTimeSpeedRate: "1.00000"
   ##
   serverOptions: {}
 
