@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ printf "%s-env" (include "server.name" .) }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "server.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+data:
+  {{- if .Values.common.alwaysUpdateOnStart }}
+  PW_START_MODE: "2"
+  {{- else }}
+  PW_START_MODE: "0"
+  {{- end }}
+  PW_MAX_PLAYERS: "{{ default "32" .Values.common.maxPlayers }}"
+  PW_SERVER_NAME: "{{ default "" .Values.common.serverName }}"
+  PW_SERVER_DESCRIPTION: "{{ .Values.common.serverDescription }}"
+  PW_SERVER_PASSWORD: "{{ .Values.common.serverPassword }}"
+  PW_SERVER_ADMIN_PASSWORD: "{{ default "Chang3M3!" .Values.common.serverAdminPassword }}"
+  PW_PUBLIC_IP: "{{ default "" .Values.common.publicIp }}"
+  PW_PUBLIC_PORT: "{{ default .Values.server.service.ports.gamePort .Values.common.publicPort }}"
+  PW_MULTITHREAD_ENABLED: "{{ include "boolToString" (default "true" .Values.common.multiThreadEnabled) }}"
+  PW_COMMUNITY_SERVER: "{{ include "boolToString" (default "true" .Values.common.communityServer) }}"
+  PW_RCON_ENABLED: "{{ include "boolToString" (default "false" .Values.common.rconEnabled) }}"

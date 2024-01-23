@@ -1,0 +1,128 @@
+{{- define "server.deployment.volumeMounts" }}
+- name: server-files
+  mountPath: /data/server
+- name: server-saves
+  mountPath: /data/saves
+- name: server-backups
+  mountPath: /data/backups
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "server.name" . }}
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "server.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  selector:
+    matchLabels: {{ include "server.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "server.labels" . | nindent 8 }}
+      annotations:
+        checksum/cm-environment: "{{ include (print $.Template.BasePath "/server/cm-environment.yaml") . | sha256sum }}"
+        checksum/cm-config: "{{ include (print $.Template.BasePath "/server/cm-config.yaml") . | sha256sum }}"
+        {{- if .Values.server.podAnnotations }}
+        {{ toYaml .Values.server.podAnnotations | nindent 8 }}
+        {{- end }}
+        {{- if .Values.commonAnnotations }}
+        {{ toYaml .Values.commonAnnotations | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: "{{ default (include "server.name" . ) .Values.serviceAccount.server.name }}"
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.server.podSecurityContext | nindent 8 }}
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.affinity }}
+      affinity:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if eq .Values.server.networkMode "HostNetwork" }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+
+      containers:
+        - name: server
+          securityContext: {{ toYaml .Values.server.securityContext | nindent 12 }}
+          image: "{{ .Values.server.image.name }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          #command: ["sleep", "36000"]
+          envFrom:
+            - configMapRef:
+                name: "{{ printf "%s-env" (include "server.name" .) }}"
+          ports:
+            - name: game
+              containerPort: 8211
+              {{- if eq .Values.server.networkMode "HostNetwork" }}
+              hostPort: 8211
+              {{- end }}
+              protocol: UDP
+            {{- if .Values.common.rconEnabled }}
+            - name: rcon
+              containerPort: 25575
+              {{- if eq .Values.server.networkMode "HostNetwork" }}
+              hostPort: 25575
+              {{- end }}
+              protocol: TCP
+            {{- end }}
+
+          resources: {{ toYaml .Values.server.resources | nindent 12 }}
+          volumeMounts: {{ include "server.deployment.volumeMounts" . | nindent 12 }}
+
+      volumes:
+        {{- if not .Values.persistence.serverFiles.enabled }}
+        - name: server-files
+          emptyDir: {}
+        {{- else if .Values.persistence.serverFiles.existingClaim }}
+        - name: server-files
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.serverFiles.existingClaim }}
+        {{- else }}
+        - name: server-files
+          persistentVolumeClaim:
+            claimName: {{ printf "%s-server-files" (include "server.name" . ) }}
+        {{- end }}
+
+        {{- if not .Values.persistence.saves.enabled }}
+        - name: server-saves
+          emptyDir: { }
+          {{- else if .Values.persistence.saves.existingClaim }}
+        - name: server-saves
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.saves.existingClaim }}
+          {{- else }}
+        - name: server-saves
+          persistentVolumeClaim:
+            claimName: {{ printf "%s-saves" (include "server.name" . ) }}
+          {{- end }}
+
+        {{- if not .Values.persistence.backups.enabled }}
+        - name: server-backups
+          emptyDir: { }
+        {{- else if .Values.persistence.backups.existingClaim }}
+        - name: server-backups
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.backups.existingClaim }}
+        {{- else }}
+        - name: server-backups
+          persistentVolumeClaim:
+            claimName: {{ printf "%s-backups" (include "server.name" . ) }}
+        {{- end }}

@@ -1,0 +1,214 @@
+##
+## @section Global parameters
+##
+
+## @param global.imagePullSecrets - Global Docker registry secret names as an array
+## @param global.storageClass - Global storage class that will be used for all persistent volume claims
+##
+global:
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  storageClass: ""
+
+##
+## @section Common parameters
+##
+
+## @param nameOverride - String to partially override common.names.fullname template (will maintain the release name)
+##
+nameOverride: ""
+## @param fullnameOverride - String to fully override common.names.fullname template with a string
+##
+fullnameOverride: ""
+## @param clusterDomain - Kubernetes Cluster Domain
+##
+clusterDomain: cluster.local
+## @param commonLabels - Add labels to all the deployed resources
+##
+commonLabels: {}
+## @param commonAnnotations - Add annotations to all the deployed resources
+##
+commonAnnotations: {}
+
+## @param common - Common options for the chart
+##
+common:
+  ## @param common.alwaysUpdateOnStart - Updates the server on startup
+  ##
+  alwaysUpdateOnStart: true
+
+  ## @param common.serverName - Name of the server. Will have a random name if not specified
+  ##
+  serverName: ""
+
+  ## @param common.serverDescription - Description of the server
+  ##
+  serverDescription: "My Palworld dedicated server"
+
+  ## @param common.serverPassword - Password of the server if the server should be secured by a password
+  ##
+  serverPassword: ""
+
+  ## @param common.adminPassword - Password to get admin on the server
+  ##
+  serverAdminPassword: "Chang3M3!"
+
+  ## @param common.maxPlayers
+  ##
+  maxPlayers: 32
+
+  ## @param common.multiThreadEnabled
+  ##
+  multiThreadEnabled: true
+
+  ## @param common.communityServer - Sets the server to a "Community-Server". If true, the server will appear in the Community-Serverlist. Needs common.publicIp and common.publicPort
+  ##
+  communityServer: true
+
+  ## @param common.publicIp - Public ip, auto-detect if not specified, see common.communityServer
+  ##
+  publicIp: ""
+
+  ## @param common.publicPort - Public port, auto-detect if not specified, see common.communityServer
+  ##
+  publicPort: 8211
+
+  ## @param common.rconEnabled - Defines if RCON should be exposed
+  ##
+  rconEnabled: false
+
+  ## @param common.serverOptions - Server options
+  ## see: https://tech.palworldgame.com/optimize-game-balance
+  ##
+  ## Example:
+  ## serverOptions:
+  ##   DayTimeSpeedRate: 1.00000
+  ##   NightTimeSpeedRate: 1.00000
+  ##
+  serverOptions: {}
+
+## @param serviceAccount - Service account configurations
+##
+serviceAccount:
+  server:
+    ## @param serviceAccount.server.create Specifies whether a service account should be created
+    create: true
+    ## @param serviceAccount.server.annotations Annotations to add to the service account
+    annotations: {}
+    ## @param serviceAccount.server.name The name of the service account to use
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nginx:
+    ## @param serviceAccount.nginx.create Specifies whether a service account should be created
+    create: true
+    ## @param serviceAccount.nginx.annotations Annotations to add to the service account
+    annotations: { }
+    ## @param serviceAccount.nginx.name The name of the service account to use
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+## @param persistence
+##
+persistence:
+  ## @param persistence.serverFiles - Server Files
+  ##
+  serverFiles:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+
+  ## @param persistence.saves - Saves
+  ##
+  saves:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+
+  ## @param persistence.backups - Backups
+  ##
+  backups:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+
+## @param server - Server configuration
+##
+server:
+
+  ## @param server.networkMode
+  ## either "ClusterIP" or "HostNetwork"
+  ##
+  networkMode: "ClusterIP"
+
+  ## @param server.replicaCount - Replicas to deploy
+  ##
+  replicaCount: 1
+
+  ## @param server.image - Image configuration
+  ##
+  image:
+    name: marxlnfcs/palworld-dedicated-server
+    pullPolicy: IfNotPresent
+
+  ## @param server.service - Service configuration
+  ##
+  service:
+    name: ""
+    type: ClusterIP
+    ports:
+      gamePort: 8211
+      rconPort: 25575
+
+  ## Other configurations
+  ##
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+## @param nginx - Defines information about a custom nginx proxy
+## If enabled, this chart will deploy a nginx pod for mapping the enabled services
+## into the hostNetwork
+nginx:
+  enabled: false
+  services:
+    gamePort: true
+    rconPort: true
+
+  ## Other configurations
+  ##
+  podAnnotations: { }
+  podSecurityContext: { }
+  securityContext: { }
+  resources: { }
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: { }
+  tolerations: [ ]
+  affinity: { }
+
+  ## @param nginx.image - Image configuration
+  ##
+  image:
+    name: nginx:latest
+    pullPolicy: IfNotPresent

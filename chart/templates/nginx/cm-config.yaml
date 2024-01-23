@@ -1,0 +1,45 @@
+{{- if and (.Values.nginx.enabled) (eq .Values.server.networkMode "ClusterIP") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ include "nginx.name" . }}-config"
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "nginx.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+data:
+  nginx.conf: |-
+    user  nginx;
+    worker_processes auto;
+    pid /var/run/nginx.pid;
+
+    events {
+      worker_connections  1024;
+    }
+
+    stream {
+
+      {{- if .Values.nginx.services.gamePort }}
+      upstream backend_gamePort {
+        server {{ printf "%s:%s" (include "server.service.name.external" .) (default "8211" (.Values.server.service.ports.gamePort | toString)) }} udp;
+      }
+      server {
+        listen {{ default "8211" (.Values.server.service.ports.gamePort | toString) }};
+        proxy_pass backend_gamePort;
+      }
+      {{- end }}
+
+      {{- if .Values.nginx.services.rconPort }}
+      upstream backend_rconPort {
+        server {{ printf "%s:%s" (include "server.service.name.external" .) (default "25575" (.Values.server.service.ports.rconPort | toString)) }};
+      }
+      server {
+        listen {{ default "25575" (.Values.server.service.ports.rconPort | toString) }};
+        proxy_pass backend_rconPort;
+      }
+      {{- end }}
+
+    }
+{{- end }}

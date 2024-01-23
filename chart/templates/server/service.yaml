@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ include "server.service.name" . }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "server.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.server.service.type }}
+  ports:
+    - port: {{ .Values.server.service.ports.gamePort | int }}
+      targetPort: game
+      protocol: UDP
+      name: game
+
+    {{- if .Values.common.rconEnabled }}
+    - port: {{ .Values.server.service.ports.rconPort | int }}
+      targetPort: rcon
+      protocol: TCP
+      name: rcon
+    {{- end }}
+  selector: {{- include "server.labels" . | nindent 4 }}

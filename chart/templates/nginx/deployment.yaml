@@ -1,0 +1,76 @@
+{{- if and (.Values.nginx.enabled) (eq .Values.server.networkMode "ClusterIP") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nginx.name" . }}
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "nginx.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "nginx.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "nginx.labels" . | nindent 8 }}
+      annotations:
+        checksum/cm-config: "{{ include (print $.Template.BasePath "/nginx/cm-config.yaml") . | sha256sum }}"
+        {{- if .Values.nginx.podAnnotations }}
+        {{ toYaml .Values.nginx.podAnnotations | nindent 8 }}
+        {{- end }}
+        {{- if .Values.commonAnnotations }}
+        {{ toYaml .Values.commonAnnotations | nindent 8 }}
+        {{- end }}
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: "{{ default (include "nginx.name" . ) .Values.serviceAccount.nginx.name }}"
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.nginx.podSecurityContext | nindent 8 }}
+      {{- with .Values.nginx.nodeSelector }}
+      nodeSelector:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nginx.affinity }}
+      affinity:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nginx.tolerations }}
+      tolerations:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: nginx
+          image: "{{ .Values.nginx.image.name }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.nginx.securityContext | nindent 12 }}
+          ports:
+            {{- if .Values.nginx.services.queryPort }}
+            - containerPort: {{ default "27015" .Values.server.service.ports.queryPort }}
+              hostPort: {{ default "27015" .Values.server.service.ports.queryPort }}
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.nginx.services.gamePort }}
+            - containerPort: {{ default "8211" .Values.server.service.ports.gamePort }}
+              hostPort: {{ default "8211" .Values.server.service.ports.gamePort }}
+              protocol: UDP
+            {{- end }}
+
+          resources: {{- toYaml .Values.nginx.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: config
+          configMap:
+            name: "{{ include "nginx.name" . }}-config"
+{{- end }}

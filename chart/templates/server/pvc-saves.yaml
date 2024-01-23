@@ -1,0 +1,21 @@
+{{- if and (.Values.persistence.saves.enabled) (not .Values.persistence.saves.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ printf "%s-saves" (include "server.name" .) }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "server.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  storageClassName: "{{ default "" .Values.persistence.saves.storageClass .Values.global.storageClass }}"
+  accessModes:
+  {{- range .Values.persistence.saves.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.saves.size | quote }}
+{{- end }}

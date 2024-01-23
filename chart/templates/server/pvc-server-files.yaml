@@ -1,0 +1,21 @@
+{{- if and (.Values.persistence.serverFiles.enabled) (not .Values.persistence.serverFiles.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ printf "%s-server-files" (include "server.name" .) }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "server.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  storageClassName: "{{ default "" .Values.persistence.serverFiles.storageClass .Values.global.storageClass }}"
+  accessModes:
+  {{- range .Values.persistence.serverFiles.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.serverFiles.size | quote }}
+{{- end }}
